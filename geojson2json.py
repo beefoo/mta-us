@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-# Description: converts geojson file to svg
+# Description: converts geojson file to json
 # Example usage:
-#   python geojson2json.py -gf data/nycboroughboundaries.geojson
+#   python geojson2json.py -gf data/nycboroughboundaries.geojson -jf data/nycboroughboundaries.json
 
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -56,36 +57,44 @@ lats = []
 lngs = []
 for feature in features:
     for path in feature['geometry']['coordinates']:
-        for latlng in path:
-            lats.append(-1*latlng[0])
-            lngs.append(latlng[1])
+        for lnglat in path:
+            lngs.append(lnglat[0])
+            lats.append(lnglat[1])
 minLat = min(lats)
 maxLat = max(lats)
 minLng = min(lngs)
 maxLng = max(lngs)
-print "Found %s features with boundaries (%s, %s, %s, %s)" % (len(features), -1*maxLat, -1*minLat, minLng, maxLng)
+ratio = 1.0 * (maxLng-minLng) / (maxLat-minLat)
+# ratio = 1.0
+print "Found %s features with boundaries (%s, %s, %s, %s) and ratio (%s:1)" % (len(features), maxLat, minLat, minLng, maxLng, ratio)
 
 # loop through each feature
 jsonFeatures = []
 for feature in features:
     label = feature['properties'][args.PROPERTY_LABEL]
+    identifier = strToId(label)
     coordinates = feature['geometry']['coordinates']
+    the_index = next((i for (i, f) in enumerate(jsonFeatures) if f["id"] == identifier), len(jsonFeatures))
+    if the_index >= len(jsonFeatures):
+        jsonFeatures.append({
+            "id": identifier,
+            "label": label,
+            "paths": []
+        })
     for path in coordinates:
-        jsonFeature = {
-            "id": strToId(label),
-            "label": label
-        }
         jsonPath = []
-        for latlng in path:
-            lat = -1*latlng[0]
-            lng = latlng[1]
+        for lnglat in path:
+            lng = lnglat[0]
+            lat = lnglat[1]
             y = norm(lat, minLat, maxLat)
             x = norm(lng, minLng, maxLng)
-            jsonPath.append([x, y])
-        jsonFeature["path"] = jsonPath
-        jsonFeatures.append(jsonFeature)
+            jsonPath.append([x, 1.0-y])
+        jsonFeatures[the_index]["paths"].append(jsonPath)
 
 # write to file
 with open(args.JSON_OUTPUT_FILE, 'w') as f:
-    json.dump(jsonFeatures, f)
+    json.dump({
+        "aspect_ratio": ratio,
+        "features": jsonFeatures
+    }, f)
     print "Successfully wrote data to file: %s" % args.JSON_OUTPUT_FILE
