@@ -2,7 +2,7 @@
 
 # Description: converts geojson file to json
 # Example usage:
-#   python geojson2json.py -gf data/nycboroughboundaries.geojson -jf data/nycboroughboundaries.json
+#   python getBoroughBoundaries.py
 
 import argparse
 import json
@@ -29,44 +29,13 @@ def strToId(s):
     s = re.sub('^[^a-zA-Z_]+', '_', s)
     return s
 
-# interpolate
-def lerp(a, b, amt):
-    return a + (b - a) * amt
-
-# limit
-def lim(a, a0, a1):
-    if a < a0:
-        return a0
-    elif a > a1:
-        return a1
-    else:
-        return a
-
-# normalize
-def norm(a, a0, a1):
-    return lim((a-a0) / (a1-a0), 0, 1)
-
 # read geojson
 features = []
 with open(args.GEOJSON_INPUT_FILE) as f:
     geojson = json.load(f)
     features = geojson['features']
 
-# find min/max lat/lng
-lats = []
-lngs = []
-for feature in features:
-    for path in feature['geometry']['coordinates']:
-        for lnglat in path:
-            lngs.append(lnglat[0])
-            lats.append(lnglat[1])
-minLat = min(lats)
-maxLat = max(lats)
-minLng = min(lngs)
-maxLng = max(lngs)
-ratio = 1.0 * (maxLng-minLng) / (maxLat-minLat)
-# ratio = 1.0
-print "Found %s features with boundaries (%s, %s, %s, %s) and ratio (%s:1)" % (len(features), maxLat, minLat, minLng, maxLng, ratio)
+print "Found %s features" % len(features)
 
 # loop through each feature
 jsonFeatures = []
@@ -79,22 +48,17 @@ for feature in features:
         jsonFeatures.append({
             "id": identifier,
             "label": label,
-            "paths": []
+            "polygons": []
         })
     for path in coordinates:
-        jsonPath = []
+        jsonPolygon = []
         for lnglat in path:
-            lng = lnglat[0]
-            lat = lnglat[1]
-            y = norm(lat, minLat, maxLat)
-            x = norm(lng, minLng, maxLng)
-            jsonPath.append([x, 1.0-y])
-        jsonFeatures[the_index]["paths"].append(jsonPath)
+            jsonPolygon.append(lnglat)
+        jsonFeatures[the_index]["polygons"].append(jsonPolygon)
 
 # write to file
 with open(args.JSON_OUTPUT_FILE, 'w') as f:
     json.dump({
-        "aspect_ratio": ratio,
-        "features": jsonFeatures
+        "boroughs": jsonFeatures
     }, f)
     print "Successfully wrote data to file: %s" % args.JSON_OUTPUT_FILE
