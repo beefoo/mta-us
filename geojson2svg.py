@@ -15,9 +15,10 @@ import sys
 
 # input
 parser = argparse.ArgumentParser()
+parser.add_argument('-cf', dest="CONFIG_FILE", default="config.json", help="Path to input config file")
 parser.add_argument('-sf', dest="SVG_OUTPUT_FILE", default="data/nyc.svg", help="Path to output SVG file")
 parser.add_argument('-bc', dest="BG_COLOR", default="#A2CAEA", help="Background color")
-parser.add_argument('-w', dest="WIDTH", default="1200", type=int, help="Width of image in px")
+parser.add_argument('-w', dest="WIDTH", default="2000", type=int, help="Width of image in px")
 parser.add_argument('-ma', dest="MIN_AREA", default="100", type=int, help="Min width of polygon")
 parser.add_argument('-r', dest="ROTATE_DEGREES", default="-29.0", type=float, help="Degrees to rotate")
 
@@ -25,23 +26,9 @@ parser.add_argument('-r', dest="ROTATE_DEGREES", default="-29.0", type=float, he
 args = parser.parse_args()
 
 # config geojson sources
-geojsons = [
-    {
-        "id": "boroughs",
-        "color": "#F2EAD6",
-        "file": "data/nycboroughs.geojson",
-        "groupBy": "borough",
-        "label": "borough",
-        "draw": "polygon"
-    },{
-        "id": "parks",
-        "color": "#A8D7B9",
-        "file": "data/nycparks.geojson",
-        "groupBy": "borough",
-        "label": "signname",
-        "draw": "polygon"
-    }
-]
+geojsons = []
+with open(args.CONFIG_FILE) as f:
+    geojsons = json.load(f)
 
 # get boundaries
 def boundaries(groups):
@@ -88,7 +75,7 @@ def strToId(s):
     # Remove invalid characters
     s = re.sub('[^0-9a-zA-Z_]', '_', s)
     # Remove leading characters until we find a letter or underscore
-    s = re.sub('^[^a-zA-Z_]+', '_', s)
+    # s = re.sub('^[^a-zA-Z_]+', '_', s)
     return s
 
 groups = []
@@ -111,15 +98,22 @@ for g in geojsons:
                 })
             coordinates = feature['geometry']['coordinates']
             geoType = feature['geometry']['type']
+            color = g['color']
+            if type(color) is dict:
+                if groupId in color:
+                    color = color[groupId]
+                else:
+                    color = False
             for multiLnglats in coordinates:
-                if geoType=="Polygon":
+                if geoType!="MultiPolygon":
                     multiLnglats = [multiLnglats]
                 for lnglats in multiLnglats:
                     groups[groupIndex]["features"].append({
                         "label": feature['properties'][g['label']],
                         "coordinates": lnglats,
-                        "color": g['color'],
-                        "draw": g['draw']
+                        "color": color,
+                        "draw": g['draw'],
+                        "strokeWidth": g['strokeWidth']
                     })
 
 # Determine bounds
@@ -148,12 +142,13 @@ for g in geojsons:
                 point = lnglatToPx(lnglat, bounds, WIDTH, HEIGHT)
                 point = rotate(args.ROTATE_DEGREES, point, center)
                 points.append(point)
-            if feature["draw"]=="polygon":
-                area = polygonArea(points)
-                if area > args.MIN_AREA:
-                    dwgFeatures.add(dwg.polygon(points=points, fill=feature["color"]))
-            else:
-                dwgFeatures.add(dwg.polyline(points=points, stroke=feature["color"]))
+            if feature["color"]:
+                if feature["draw"]=="polygon":
+                    area = polygonArea(points)
+                    if area > args.MIN_AREA:
+                        dwgFeatures.add(dwg.polygon(points=points, fill=feature["color"]))
+                else:
+                    dwgFeatures.add(dwg.polyline(points=points, stroke=feature["color"], stroke_width=feature["strokeWidth"], fill="none"))
 
 # Save
 dwg.save()

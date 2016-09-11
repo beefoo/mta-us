@@ -1,0 +1,50 @@
+[
+    {
+        "id": "boroughs",
+        "color": "#F2EAD6",
+        "file": "data/nycboroughs.geojson",
+        "groupBy": "borough",
+        "label": "borough",
+        "draw": "polygon",
+        "strokeWidth": 0
+    },{
+        "id": "parks",
+        "color": "#A8D7B9",
+        "file": "data/nycparks.geojson",
+        "groupBy": "borough",
+        "label": "signname",
+        "draw": "polygon",
+        "strokeWidth": 0
+    },{
+        "id": "routes",
+        "color": {
+            "a": "#0039A6",
+            "c": "#0039A6",
+            "e": "#0039A6",
+            "b": "#FF6319",
+            "d": "#FF6319",
+            "f": "#FF6319",
+            "m": "#FF6319",
+            "g": "#6CBE45",
+            "j": "#996633",
+            "z": "#996633",
+            "l": "#A7A9AC",
+            "n": "#FCCC0A",
+            "q": "#FCCC0A",
+            "r": "#FCCC0A",
+            "s": "#808183",
+            "1": "#EE352E",
+            "2": "#EE352E",
+            "3": "#EE352E",
+            "4": "#00933C",
+            "5": "#00933C",
+            "6": "#00933C",
+            "7": "#B933AD"
+        },
+        "file": "data/nycsubway.geojson",
+        "groupBy": "route_id",
+        "label": "Line",
+        "draw": "polyline",
+        "strokeWidth": 3
+    }
+]
