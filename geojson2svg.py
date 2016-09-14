@@ -142,7 +142,7 @@ for g in geojsons:
                 point = lnglatToPx(lnglat, bounds, WIDTH, HEIGHT)
                 point = rotate(args.ROTATE_DEGREES, point, center)
                 points.append(point)
-            if feature["color"]:
+            if feature["color"] and points:
                 if feature["draw"]=="polygon":
                     area = polygonArea(points)
                     if area > args.MIN_AREA:

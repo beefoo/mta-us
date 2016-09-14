@@ -2,7 +2,7 @@
     {
         "id": "boroughs",
         "color": "#F2EAD6",
-        "file": "data/nycboroughs.geojson",
+        "file": "data/nycboroughs_simplified_0.3.geojson",
         "groupBy": "borough",
         "label": "borough",
         "draw": "polygon",
@@ -10,7 +10,7 @@
     },{
         "id": "parks",
         "color": "#A8D7B9",
-        "file": "data/nycparks.geojson",
+        "file": "data/nycparks_simplified_0.1.geojson",
         "groupBy": "borough",
         "label": "signname",
         "draw": "polygon",
@@ -41,7 +41,7 @@
             "6": "#00933C",
             "7": "#B933AD"
         },
-        "file": "data/nycsubway.geojson",
+        "file": "data/nycsubway_simplified_0.1.geojson",
         "groupBy": "route_id",
         "label": "Line",
         "draw": "polyline",
