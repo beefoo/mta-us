@@ -21,6 +21,7 @@ parser.add_argument('-bc', dest="BG_COLOR", default="#A2CAEA", help="Background 
 parser.add_argument('-w', dest="WIDTH", default="2000", type=int, help="Width of image in px")
 parser.add_argument('-ma', dest="MIN_AREA", default="100", type=int, help="Min width of polygon")
 parser.add_argument('-r', dest="ROTATE_DEGREES", default="-29.0", type=float, help="Degrees to rotate")
+parser.add_argument('-rs', dest="RESIZE_AMOUNT", default="0.9", type=float, help="Amount to resize")
 
 # init input
 args = parser.parse_args()
@@ -60,6 +61,14 @@ def lnglatToPx(lnglat, bounds, width, height):
     x = (lnglat[0] - bounds[0]) / (bounds[2] - bounds[0]) * width
     y = (1.0 - (lnglat[1] - bounds[1]) / (bounds[3] - bounds[1])) * height
     return (int(round(x)), int(round(y)))
+
+def resize(amount, point1, point0):
+    (x1, y1) = point1
+    (x0, y0) = point0
+    # translate to (0,0), scale, translate back to (cx,cy)
+    x2 = (x1 - x0) * amount + x0
+    y2 = (y1 - y0) * amount + y0
+    return (x2, y2)
 
 def rotate(degrees, point1, point0):
     (x1, y1) = point1
@@ -118,37 +127,66 @@ for g in geojsons:
 
 # Determine bounds
 bounds = boundaries(groups)
-
-# Init svg
+print "Bounds geo (lat/lng): [%s, %s, %s, %s]" % (bounds[0], bounds[1], bounds[2], bounds[3])
 WIDTH = args.WIDTH
 HEIGHT = int(round(WIDTH / 1.005))
+center = (WIDTH/2.0, HEIGHT/2.0)
+
+# convert everything to pixels
+xs = []
+ys = []
+for gi, group in enumerate(groups):
+    for fi, feature in enumerate(group["features"]):
+        points = []
+        for lnglat in feature["coordinates"]:
+            point = lnglatToPx(lnglat, bounds, WIDTH, HEIGHT)
+            # point = resize(args.RESIZE_AMOUNT, point, center)
+            point = rotate(args.ROTATE_DEGREES, point, center)
+            points.append(point)
+            xs.append(point[0])
+            ys.append(point[1])
+        groups[gi]["features"][fi]["points"] = points
+minX = min(xs)
+maxX = max(xs)
+minY = min(ys)
+maxY = max(ys)
+print "Bounds after rotation (px): [%s, %s, %s, %s]" % (minX, minY, maxX, maxY)
+
+# adjust pixels after rotation
+translateX = -1 * minX
+translateY = -1 * minY
+WIDTH = maxX - minX
+HEIGHT = maxY - minY
+for gi, group in enumerate(groups):
+    for fi, feature in enumerate(group["features"]):
+        for pi, point in enumerate(feature["points"]):
+            groups[gi]["features"][fi]["points"][pi] = (point[0]+translateX, point[1]+translateY)
+print "Bounds after adjustment (px): [0, 0, %s, %s]" % (WIDTH, HEIGHT)
+
+# Init svg
 dwg = svgwrite.Drawing(args.SVG_OUTPUT_FILE, size=(WIDTH*px, HEIGHT*px), profile='full')
 
 # Draw bg
 dwgBg = dwg.add(dwg.g(id='background'))
 dwgBg.add(dwg.rect(size=(WIDTH*px, HEIGHT*px), fill=args.BG_COLOR))
 print "Initialized svg with size %s x %s px" % (WIDTH, HEIGHT)
-center = (WIDTH/2.0, HEIGHT/2.0)
 
-# Draw groups
+# Draw features
 for g in geojsons:
     groupsOfType = [group for group in groups if group["type"]==g["id"]]
     dwgType = dwg.add(dwg.g(id=g["id"]))
     for group in groupsOfType:
         dwgFeatures = dwgType.add(dwg.g(id=group["id"]))
         for feature in group["features"]:
-            points = []
-            for lnglat in feature["coordinates"]:
-                point = lnglatToPx(lnglat, bounds, WIDTH, HEIGHT)
-                point = rotate(args.ROTATE_DEGREES, point, center)
-                points.append(point)
-            if feature["color"] and points:
+            points = feature["points"]
+            color = feature["color"]
+            if color and points:
                 if feature["draw"]=="polygon":
                     area = polygonArea(points)
                     if area > args.MIN_AREA:
-                        dwgFeatures.add(dwg.polygon(points=points, fill=feature["color"]))
+                        dwgFeatures.add(dwg.polygon(points=points, fill=color))
                 else:
-                    dwgFeatures.add(dwg.polyline(points=points, stroke=feature["color"], stroke_width=feature["strokeWidth"], fill="none"))
+                    dwgFeatures.add(dwg.polyline(points=points, stroke=color, stroke_width=feature["strokeWidth"], fill="none"))
 
 # Save
 dwg.save()

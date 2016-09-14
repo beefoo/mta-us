@@ -39,7 +39,11 @@
             "4": "#00933C",
             "5": "#00933C",
             "6": "#00933C",
-            "7": "#B933AD"
+            "7": "#B933AD",
+            "si": "#0039A6",
+            "gs": "#808183",
+            "fs": "#808183",
+            "air": "#808183"
         },
         "file": "data/nycsubway_simplified_0.1.geojson",
         "groupBy": "route_id",
