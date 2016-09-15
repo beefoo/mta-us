@@ -46,6 +46,31 @@ def boundaries(groups):
     maxLat = max(lats)
     return [minLng, minLat, maxLng, maxLat]
 
+def getPathsRecursive(arr):
+    # this is a line
+    if isPath(arr):
+        return arr
+
+    # this is an array of lines
+    elif isinstance(arr[0], list):
+        results = []
+        for subArr in arr:
+            result = getPathsRecursive(subArr)
+            if isPath(result):
+                results.append(result)
+            else:
+                results += result
+        return results
+
+
+def isPath(arr):
+    return isinstance(arr[0], list) and isinstance(arr[0][0], float)
+
+def lnglatToPx(lnglat, bounds, width, height):
+    x = (lnglat[0] - bounds[0]) / (bounds[2] - bounds[0]) * width
+    y = (1.0 - (lnglat[1] - bounds[1]) / (bounds[3] - bounds[1])) * height
+    return (int(round(x)), int(round(y)))
+
 def polygonArea(corners):
     n = len(corners) # of corners
     area = 0.0
@@ -55,12 +80,6 @@ def polygonArea(corners):
         area -= corners[j][0] * corners[i][1]
     area = abs(area) / 2.0
     return area
-
-
-def lnglatToPx(lnglat, bounds, width, height):
-    x = (lnglat[0] - bounds[0]) / (bounds[2] - bounds[0]) * width
-    y = (1.0 - (lnglat[1] - bounds[1]) / (bounds[3] - bounds[1])) * height
-    return (int(round(x)), int(round(y)))
 
 def resize(amount, point1, point0):
     (x1, y1) = point1
@@ -113,17 +132,15 @@ for g in geojsons:
                     color = color[groupId]
                 else:
                     color = False
-            for multiLnglats in coordinates:
-                if geoType!="MultiPolygon":
-                    multiLnglats = [multiLnglats]
-                for lnglats in multiLnglats:
-                    groups[groupIndex]["features"].append({
-                        "label": feature['properties'][g['label']],
-                        "coordinates": lnglats,
-                        "color": color,
-                        "draw": g['draw'],
-                        "strokeWidth": g['strokeWidth']
-                    })
+            paths = getPathsRecursive(coordinates)
+            for path in paths:
+                groups[groupIndex]["features"].append({
+                    "label": feature['properties'][g['label']],
+                    "coordinates": path,
+                    "color": color,
+                    "draw": g['draw'],
+                    "strokeWidth": g['strokeWidth']
+                })
 
 # Determine bounds
 bounds = boundaries(groups)
